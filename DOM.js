@@ -27,3 +27,17 @@ var targetElement1 = elementsByTagName[elementsByTagName.length - 1]; // Assumin
 targetElement1.textContent = "ARpi";
 
 console.log(targetElement1)
+
+
+//QueryselectorALL###Make the 2nd item have a green background color:
+var itemList = document.querySelectorAll("list-group-item");
+if (itemList.length >= 2) {
+    itemList[1].style.backgroundColor = "green";
+}
+
+//Make the 3rd item invisible:
+if (itemList.length >= 3) {
+    itemList[2].style.display = "none";
+}
+
+console.log(itemList);
