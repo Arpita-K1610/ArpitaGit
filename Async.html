@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        const posts = [];
+        let lastActivityTime = null;
+
+        function createPost(post) {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    posts.push(post);
+                    resolve();
+                }, 1000);
+            });
+        }
+
+        function updateLastUserActivityTime() {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    lastActivityTime = new Date();
+                    resolve();
+                }, 1000);
+            });
+        }
+
+        function deleteLastPost() {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    if (posts.length > 0) {
+                        const deletedPost = posts.pop();
+                        resolve(deletedPost);
+                    } else {
+                        reject("ERROR: No posts to delete");
+                    }
+                }, 1000);
+            });
+        }
+
+        function getColdDrinks() {
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    resolve("Cold Drinks");
+                }, 1000);
+            });
+        }
+
+        async function main() {
+            try {
+                await createPost({
+                    title: "POST1"
+                });
+                await updateLastUserActivityTime();
+
+                console.log("Posts:", posts);
+                console.log("Last Activity Time:", lastActivityTime);
+
+                const deletedPost = await deleteLastPost();
+                console.log("Deleted Post:", deletedPost);
+
+                const coldDrinks = await getColdDrinks();
+                console.log("Cold Drinks:", coldDrinks);
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
+        main();
+    </script>
+</body>
+
+</html>
