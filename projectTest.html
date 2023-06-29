@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>To-Do List</title>
+    <style>
+        #todo-container {
+            width: 400px;
+            margin: 20px auto;
+        }
+        
+        #input-container input,
+        #input-container button {
+            margin-bottom: 10px;
+        }
+        
+        #todo-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .todo-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f1f1f1;
+        }
+        
+        .todo-item.done {
+            background-color: #d1ffd1;
+        }
+        
+        .delete-button,
+        .done-button {
+            float: right;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>To-Do List</h1>
+
+    <div id="todo-container">
+        <div id="input-container">
+            <input type="text" id="todo-name" placeholder="Todo Name">
+            <input type="text" id="todo-description" placeholder="Todo Description">
+            <button onclick="addItem()">Add Item</button>
+        </div>
+        <ul id="todo-list"></ul>
+    </div>
+
+    <script>
+        function addItem() {
+            var todoName = document.getElementById("todo-name").value;
+            var todoDescription = document.getElementById("todo-description").value;
+
+            if (todoName && todoDescription) {
+                var todoList = document.getElementById("todo-list");
+                var listItem = document.createElement("li");
+                listItem.className = "todo-item";
+                listItem.innerHTML = "<h3>" + todoName + "</h3><p>" + todoDescription + "</p><span class='done-button' onclick='markAsDone(this)'>(Done)</span><span class='delete-button' onclick='removeItem(this)'>(X)</span>";
+                todoList.appendChild(listItem);
+
+                // Clear input fields
+                document.getElementById("todo-name").value = "";
+                document.getElementById("todo-description").value = "";
+            }
+        }
+
+        function markAsDone(item) {
+            var listItem = item.parentNode;
+            listItem.classList.toggle("done");
+        }
+
+        function removeItem(item) {
+            var listItem = item.parentNode;
+            var todoList = listItem.parentNode;
+            todoList.removeChild(listItem);
+        }
+    </script>
+</body>
+
+</html>
