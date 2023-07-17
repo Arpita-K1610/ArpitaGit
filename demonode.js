@@ -1,71 +1,48 @@
 const http = require('http');
-const fs = require('fs');
 
 const port = 5000;
-let messages = [];
+
+let currentMessage = '';
 
 const server = http.createServer((req, res) => {
-  if (req.method === 'GET') {
-    if (req.url === '/') {
-      messages = readMessages();
-      const form = getForm(messages);
-      res.writeHead(200, { 'Content-Type': 'text/html' });
-      res.end(form);
-    } else {
-      res.writeHead(404);
-      res.end('Not Found');
-    }
-  } else if (req.method === 'POST') {
-    if (req.url === '/') {
-      let body = '';
-      req.on('data', (chunk) => {
-        body += chunk;
-      });
-      req.on('end', () => {
-        const { message } = parseFormData(body);
-        if (message) {
-          messages.unshift(message);
-          storeMessage(message);
-        }
-        res.writeHead(302, { Location: '/' });
-        res.end();
-      });
-    } else {
-      res.writeHead(404);
-      res.end('Not Found');
-    }
+  if (req.method === 'GET' && req.url === '/') {
+    const form = getForm();
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(form);
+  } else if (req.method === 'POST' && req.url === '/') {
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      const { message } = parseFormData(body);
+      if (message) {
+        currentMessage = message;
+      }
+      res.writeHead(302, { Location: '/' });
+      res.end();
+    });
+  } else {
+    res.writeHead(404);
+    res.end('Not Found');
   }
 });
 
-const readMessages = () => {
-  try {
-    const data = fs.readFileSync('messages.txt', 'utf8');
-    return data.trim().split('\n').reverse();
-  } catch (err) {
-    console.error('Error reading messages:', err);
-    return [];
-  }
-};
-
-const getForm = (messages) => {
-  const messageList = messages.map((message) => `<li>${message}</li>`).join('');
+const getForm = () => {
   return `
-    <h1>Message Board</h1>
-    <form method="POST" action="/">
-      <input type="text" name="message" placeholder="Enter your message" required/>
-      <button type="submit">Send</button>
-    </form>
-    <h2>Messages:</h2>
-    <ul>${messageList}</ul>
+    <html>
+      <head>
+        <title>Message Form</title>
+      </head>
+      <body>
+        <p>${currentMessage}</p>
+        <form method="POST" action="/">
+          <input type="text" name="message" placeholder="Enter your message" required/>
+          <button type="submit">Send</button>
+        </form>
+      </body>
+    </html>
   `;
-};
-
-const storeMessage = (message) => {
-  fs.appendFile('messages.txt', `${message}\n`, (err) => {
-    if (err) {
-      console.error('Error writing message:', err);
-    }
-  });
 };
 
 const parseFormData = (data) => {
