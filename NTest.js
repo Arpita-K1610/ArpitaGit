@@ -1,133 +1,173 @@
 const express = require('express');
-const session = require('express-session');
-const mysql = require('mysql');
 const bodyParser = require('body-parser');
-
+const mysql = require('mysql2');
 const app = express();
 const port = 3000;
 
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
-  secret: 'your_secret_key', // Replace with your own secret key
-  resave: false,
-  saveUninitialized: true,
-}));
-
-const db = mysql.createConnection({
-  host: 'localhost', // Replace with your MySQL host
-  user: 'root', // Replace with your MySQL user
-  password:'Niteesh@1995', // Replace with your MySQL password
-  database: 'candy_todos', // Use the database you created
+const dbConnection = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: 'Niteesh@1995',
+  database: 'CANDI_Todos' 
 });
 
-db.connect((err) => {
-  if (err) throw err;
+dbConnection.connect((err) => {
+  if (err) {
+    console.error('Error connecting to MySQL database:', err);
+    return;
+  }
   console.log('Connected to MySQL database');
+  
+  // Create the candy_items table if it does not exist
+  dbConnection.query(`
+    CREATE TABLE IF NOT EXISTS candy_items (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      itemName VARCHAR(255) NOT NULL,
+      description VARCHAR(255) NOT NULL,
+      price FLOAT NOT NULL,
+      quantity INT NOT NULL,
+      buy1 INT NOT NULL,
+      buy2 INT NOT NULL,
+      buy3 INT NOT NULL
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating candy_items table:', err);
+    }
+  });
 });
+
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
-  const buyValues = req.session.buyValues || {};
+  // Fetch all candy items from the database
+  dbConnection.query('SELECT * FROM candy_items', (err, results) => {
+    if (err) {
+      console.error('Error fetching candy items from database:', err);
+      res.sendStatus(500);
+    } else {
+      const candyItems = results;
+      let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Candy Todo</title>
+        </head>
+        <body>
+          <h1>Candy Todo</h1>
+          <form action="/addItem" method="post">
+            <label for="itemName">Item Name:</label>
+            <input type="text" name="itemName" required>
+            <label for="description">Description:</label>
+            <input type="text" name="description" required>
+            <label for="price">Price:</label>
+            <input type="number" name="price" step="0.01" required>
+            <label for="quantity">Quantity:</label>
+            <input type="number" name="quantity" required>
+            <button type="submit">Add Item</button>
+          </form>
+          <hr>
+      `;
 
-  db.query('SELECT * FROM candy_items', (err, rows) => {
-    if (err) throw err;
+candyItems.forEach((item, index) => {
+  htmlContent += `
+    <div>
+      <h2>${item.itemName}</h2>
+      <div>
+        <label for="itemName">Item Name:</label>
+        <input type="text" name="itemName" value="${item.itemName}" readonly>
+        <label for="description">Description:</label>
+        <input type="text" name="description" value="${item.description}" readonly>
+        <label for="price">Price:</label>
+        <input type="number" name="price" step="0.01" value="${item.price}" readonly>
+        <label for="quantity">Quantity:</label>
+        <input type="number" name="quantity" value="${item.quantity}" readonly>
+      </div>
+      <div>
+        <h3>Buy1 Quantity:</h3>
+        <input type="number" name="buy1" value="${item.buy1}" onchange="updateBuyQuantity(${index})">
+        <h3>Buy2 Quantity:</h3>
+        <input type="number" name="buy2" value="${item.buy2}" onchange="updateBuyQuantity(${index})">
+        <h3>Buy3 Quantity:</h3>
+        <input type="number" name="buy3" value="${item.buy3}" onchange="updateBuyQuantity(${index})">
+      </div>
+    </div>
+    <hr>
+  `;
+});
 
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Candy Todos</title>
-      </head>
-      <body>
-        <h1>Todos List</h1>
-        <ul>
-          ${rows.map((item) => `
-            <li>
-              <strong>Name:</strong> ${item.name}<br>
-              <strong>Description:</strong> ${item.description}<br>
-              <strong>Price:</strong> ${item.price}<br>
-              <strong>Quantity:</strong> ${item.quantity}<br>
-              <button onclick="increaseQuantity(${item.id}, 'buy1')">Buy1</button>
-              <button onclick="increaseQuantity(${item.id}, 'buy2')">Buy2</button>
-              <button onclick="increaseQuantity(${item.id}, 'buy3')">Buy3</button>
-              <span id="buy1-${item.id}">Buy1: ${buyValues[item.id]?.buy1 || 0}</span><br>
-              <span id="buy2-${item.id}">Buy2: ${buyValues[item.id]?.buy2 || 0}</span><br>
-              <span id="buy3-${item.id}">Buy3: ${buyValues[item.id]?.buy3 || 0}</span><br>
-            </li>
-          `).join('')}
-        </ul>
-        <form action="/addItem" method="post">
-          <label for="name">Name:</label>
-          <input type="text" id="name" name="name" required><br>
-          <label for="description">Description:</label>
-          <input type="text" id="description" name="description" required><br>
-          <label for="price">Price:</label>
-          <input type="text" id="price" name="price" required><br>
-          <label for="quantity">Quantity:</label>
-          <input type="text" id="quantity" name="quantity" required><br>
-          <button type="submit" onclick="clearLocalStorage()">Add Item</button>
-        </form>
-        <script>
-          function increaseQuantity(id, buyButton) {
-            const currentValue = parseInt(document.getElementById(buyButton + '-' + id).textContent) || 0;
-            const newValue = prompt('Enter value for ' + buyButton + ':', currentValue);
+      htmlContent += `
+          <script>
+            function updateBuyQuantity(index) {
+              const buy1 = document.getElementsByName('buy1')[index].value;
+              const buy2 = document.getElementsByName('buy2')[index].value;
+              const buy3 = document.getElementsByName('buy3')[index].value;
 
-            if (newValue !== null) {
-              updateBuyValue(id, buyButton, newValue);
+              fetch('/addBuyQuantity', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: \`index=\${index}&buy1=\${buy1}&buy2=\${buy2}&buy3=\${buy3}\`
+              })
+              .then(() => {
+                console.log('Buy quantities updated successfully.');
+              })
+              .catch((error) => {
+                console.error('Error updating buy quantities:', error);
+              });
             }
-          }
+          </script>
+        </body>
+        </html>
+      `;
 
-          function updateBuyValue(id, buyButton, value) {
-            document.getElementById(buyButton + '-' + id).textContent = buyButton + ': ' + value;
-
-            fetch('/saveBuyValue', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ id, buyButton, value }),
-            });
-          }
-
-          function clearLocalStorage() {
-            localStorage.clear();
-          }
-        </script>
-      </body>
-      </html>
-    `);
+      res.send(htmlContent);
+    }
   });
 });
 
 app.post('/addItem', (req, res) => {
-  const { name, description, price, quantity } = req.body;
+  const { itemName, description, price, quantity } = req.body;
+  if (itemName && description && price && quantity) {
+    const newItem = {
+      itemName,
+      description,
+      price,
+      quantity,
+      buy1: 0,
+      buy2: 0,
+      buy3: 0
+    };
 
-  const newItem = {
-    name: name,
-    description: description,
-    price: parseFloat(price),
-    quantity: parseInt(quantity),
-  };
-
-  db.query('INSERT INTO candy_items SET ?', newItem, (err, result) => {
-    if (err) throw err;
-    console.log('Candy item added to the database');
-    res.redirect('/');
-  });
+    dbConnection.query('INSERT INTO candy_items SET ?', newItem, (err) => {
+      if (err) {
+        console.error('Error adding candy item to database:', err);
+        res.sendStatus(500);
+      } else {
+        res.redirect('/');
+      }
+    });
+  }
 });
 
-app.post('/saveBuyValue', (req, res) => {
-  const { id, buyButton, value } = req.body;
-
-  if (!req.session.buyValues) {
-    req.session.buyValues = {};
+app.post('/addBuyQuantity', (req, res) => {
+  const { index, buy1, buy2, buy3 } = req.body;
+  if (index !== undefined) {
+    const item = candyItems[index];
+    dbConnection.query(
+      'UPDATE candy_items SET buy1=?, buy2=?, buy3=? WHERE id=?',
+      [buy1, buy2, buy3, item.id],
+      (err) => {
+        if (err) {
+          console.error('Error updating buy quantities in database:', err);
+          res.sendStatus(500);
+        } else {
+          res.redirect('/');
+        }
+      }
+    );
   }
-
-  req.session.buyValues[id] = {
-    ...req.session.buyValues[id],
-    [buyButton]: parseInt(value),
-  };
-
-  res.sendStatus(200);
 });
 
 app.listen(port, () => {
